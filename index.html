@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disney Character Search</title>
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    th, td {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+</style>
+</head>
+<body>
+    <div>
+        <input type="text" id="searchInput">
+        <button id="searchButton">Søk</button>
+        <button id="addToTableButton">Legg til i tabell</button>
+    </div>
+    <div id="searchResult"></div>
+    <table id="characterTable">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>Bilde</th>
+                <th>Filmer</th>
+                <th>Videospill</th>
+                <th>Mer info</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        const searchInput = document.getElementById("searchInput");
+        const searchButton = document.getElementById("searchButton");
+        const addToTableButton = document.getElementById("addToTableButton");
+        const searchResult = document.getElementById("searchResult");
+        const characterTable = document.getElementById("characterTable").getElementsByTagName('tbody')[0];
+
+        const fetchData = async () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const url = `https://api.disneyapi.dev/character?page=1&pageSize=7438`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const characters = data.data;
+
+            const matchingCharacters = characters.filter(character => {
+                return character.name.toLowerCase().includes(searchTerm);
+            });
+
+            if (matchingCharacters.length === 0) {
+                searchResult.textContent = "Ingen treff funnet. Sjekk stavemåten eller prøv et annet navn.";
+                return;
+            }
+
+            searchResult.innerHTML = ""; // Reset search result
+            matchingCharacters.forEach(character => {
+                const characterInfo = document.createElement("div");
+                characterInfo.innerHTML = `
+                    <p><a href="#" class="characterLink">${character.name}</a></p>
+                    <img src="${character.imageUrl}" alt="${character.name}" height="100" class="characterImage">
+                    <p><a href="${character.sourceUrl}">Mer info</a></p>
+                `;
+                searchResult.appendChild(characterInfo);
+            });
+
+            // Add event listener to each character link
+            const characterLinks = document.querySelectorAll('.characterLink');
+            characterLinks.forEach(link => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    addToTable(event.target.textContent, matchingCharacters);
+                });
+            });
+
+            // Add event listener to each character image
+            const characterImages = document.querySelectorAll('.characterImage');
+            characterImages.forEach(image => {
+                image.addEventListener('click', (event) => {
+                    const characterName = event.target.alt;
+                    addToTable(characterName, matchingCharacters);
+                });
+            });
+        };
+
+        const addToTable = (characterName, matchingCharacters) => {
+            const matchingCharacter = matchingCharacters.find(character => character.name.toLowerCase() === characterName.toLowerCase());
+
+            if (!matchingCharacter) {
+                alert("Fant ikke figuren i søkeresultatet. Søk etter figuren først.");
+                return;
+            }
+
+            const characterInfo = document.createElement("div");
+            characterInfo.innerHTML = `
+                <p>${matchingCharacter.name}</p>
+                <img src="${matchingCharacter.imageUrl}" alt="${matchingCharacter.name}" height="100">
+                <p>${matchingCharacter.films.slice(0, 3).join(', ')}</p>
+                <p>${matchingCharacter.videoGames.slice(0, 3).join(', ')}</p>
+                <p><a href="${matchingCharacter.sourceUrl}">Mer info</a></p>
+            `;
+
+            const row = characterTable.insertRow();
+            row.innerHTML = `
+                <td>${characterInfo.children[0].textContent}</td>
+                <td>${characterInfo.children[1].outerHTML}</td>
+                <td>${characterInfo.children[2].textContent}</td>
+                <td>${matchingCharacter.videoGames.slice(0, 3).join(', ')}</td>
+                <td>${characterInfo.children[4].outerHTML}</td>
+            `;
+        };
+
+        searchButton.addEventListener("click", fetchData);
+        addToTableButton.addEventListener("click", () => {
+            const firstCharacterName = document.querySelector('.characterLink').textContent;
+            addToTable(firstCharacterName, []);
+        });
+    </script>
+</body>
+</html>
